@@ -29,7 +29,8 @@ public class UserServiceIntegrationTest {
         userService.create(new CreateUserCommand("nicole@example.com", "a-password", "Nicole"));
 
         assertThat(jdbcTemplate.queryForObject("select password_hash from users where email = ?", String.class, "nicole@example.com"))
-                .startsWith("{bcrypt}");
+                .startsWith("{bcrypt}")
+                .isNotEqualTo("a-password");
     }
 
     @Test
