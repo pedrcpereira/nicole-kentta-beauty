@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class UserServiceTest {
+class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
@@ -23,7 +23,7 @@ public class UserServiceTest {
     private PasswordEncoder encoder;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
         userService = new UserService(userRepository, encoder);
     }
@@ -53,7 +53,8 @@ public class UserServiceTest {
 
         assertThatThrownBy(() -> userService.create(
                 new CreateUserCommand("Nicole@Example.com", "password", "Nicole")))
-                .isInstanceOf(ConflictException.class);
+                .isInstanceOfSatisfying(ConflictException.class, e ->
+                        assertThat(e.getProperties()).containsEntry("field", "email"));
 
         verify(userRepository, never()).save(any());
     }

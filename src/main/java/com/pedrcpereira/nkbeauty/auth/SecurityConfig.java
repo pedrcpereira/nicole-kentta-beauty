@@ -13,12 +13,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(auth -> auth.requestMatchers("/actuator/health",
-                                                                                        "/actuator/health/**",
-                                                                                        "/v3/api-docs",
-                                                                                        "/v3/api-docs/**",
-                                                                                        "/swagger-ui.html",
-                                                                                        "/swagger-ui/**",
-                                                                                        "/error").permitAll().anyRequest().authenticated());
+                "/actuator/health/**",
+                "/v3/api-docs",
+                "/v3/api-docs/**",
+                "/swagger-ui.html",
+                "/swagger-ui/**",
+                "/error").permitAll().anyRequest().authenticated());
         return http.build();
     }
 
