@@ -3,6 +3,8 @@ package com.pedrcpereira.nkbeauty.user;
 import com.pedrcpereira.nkbeauty.common.exception.ConflictException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private static final String UNIQUE_CONSTRAINT_NAME = "uk_users_email";
 
     @Transactional
     public User create(@Valid CreateUserCommand createUserCommand) {
@@ -28,6 +31,14 @@ public class UserService {
 
         String passwordHash = passwordEncoder.encode(createUserCommand.password());
 
-        return userRepository.save(new User(createUserCommand.email(), passwordHash, createUserCommand.name()));
+        try {
+            return userRepository.saveAndFlush(new User(createUserCommand.email(), passwordHash, createUserCommand.name()));
+        } catch (DataIntegrityViolationException e) {
+            if (e.getCause() instanceof ConstraintViolationException cve
+                    && UNIQUE_CONSTRAINT_NAME.equals(cve.getConstraintName())) {
+                throw new ConflictException("Email already exists", Map.of("field", "email"));
+            }
+            throw e;
+        }
     }
 }
