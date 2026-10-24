@@ -1,0 +1,85 @@
+package com.pedrcpereira.nkbeauty.user;
+
+import com.pedrcpereira.nkbeauty.common.exception.ConflictException;
+import org.hibernate.exception.ConstraintViolationException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class UserServiceTest {
+
+    @Mock
+    private UserRepository userRepository;
+
+    private UserService userService;
+    private PasswordEncoder encoder;
+
+    @BeforeEach
+    void setUp() {
+        encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
+        userService = new UserService(userRepository, encoder);
+    }
+
+    @Test
+    void createNormalizesEmail() {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(i -> i.getArgument(0));
+
+        User user = userService.create(new CreateUserCommand(" Nicole@Example.COM  ", "password", "Nicole"));
+
+        assertThat(user.getEmail()).isEqualTo("nicole@example.com");
+    }
+
+    @Test
+    void createHashesPassword() {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(i -> i.getArgument(0));
+
+        User user = userService.create(new CreateUserCommand("nicole@example.com", "password", "Nicole"));
+
+        assertThat(user.getPasswordHash()).isNotEqualTo("password").startsWith("{bcrypt}");
+        assertThat(encoder.matches("password", user.getPasswordHash())).isTrue();
+    }
+
+    @Test
+    void createRejectsEmailTakenInDifferentCase() {
+        when(userRepository.existsByEmail("nicole@example.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> userService.create(
+                new CreateUserCommand("Nicole@Example.com", "password", "Nicole")))
+                .isInstanceOfSatisfying(ConflictException.class, e ->
+                        assertThat(e.getProperties()).containsEntry("field", "email"));
+
+        verify(userRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void createTranslatesUniqueEmailViolationIntoConflict() {
+        when(userRepository.saveAndFlush(any(User.class))).thenThrow(new DataIntegrityViolationException("duplicate",
+                new ConstraintViolationException("duplicate", null, "uk_users_email")));
+
+        assertThatThrownBy(() -> userService.create(
+                new CreateUserCommand("nicole@example.com", "password", "Nicole")))
+                .isInstanceOfSatisfying(ConflictException.class, e ->
+                        assertThat(e.getProperties()).containsEntry("field", "email"));
+    }
+
+    @Test
+    void createThrowsUnexpectedConstraintException() {
+        var exception = new DataIntegrityViolationException("duplicate",
+                new ConstraintViolationException("constraint violated", null, "unexpected"));
+        when(userRepository.saveAndFlush(any(User.class))).thenThrow(exception);
+
+        assertThatThrownBy(() -> userService.create(
+                new CreateUserCommand("nicole@example.com", "password", "Nicole")))
+                .isSameAs(exception);
+    }
+}
