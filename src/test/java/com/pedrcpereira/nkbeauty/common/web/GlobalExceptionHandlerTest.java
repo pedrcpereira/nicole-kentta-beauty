@@ -48,7 +48,7 @@ class GlobalExceptionHandlerTest {
                 .hasStatus(HttpStatus.BAD_REQUEST)
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .bodyJson().extractingPath("$.errors").asMap()
-                .containsOnlyKeys("name", "email");;
+                .containsOnlyKeys("name", "email");
     }
 
     @Test

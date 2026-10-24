@@ -1,6 +1,5 @@
 package com.pedrcpereira.nkbeauty.common.exception;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class ConflictException extends RuntimeException {
@@ -8,7 +7,7 @@ public class ConflictException extends RuntimeException {
 
     public ConflictException(String message) {
         super(message);
-        this.properties = Map.copyOf(new HashMap<>());
+        this.properties = Map.of();
     }
 
     public ConflictException(String message, Map<String, Object> properties) {
